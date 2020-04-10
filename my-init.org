@@ -1,0 +1,363 @@
+* General Settings
+
+#+BEGIN_SRC emacs-lisp
+  (package-initialize)
+  ;; add after this line
+  ;; global bindings outside of config variables
+  (global-set-key (kbd "C-c r") 'rename-buffer)
+
+  ;;settings
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+
+  (setq inhibit-startup-message t)
+
+  ;; make ~/.saves if you don't have it
+  (setq backup-directory-alist '(("." . "~/.saves")))
+
+  (show-paren-mode 1)
+
+  (menu-bar-mode -1)
+
+  (tool-bar-mode -1)
+
+  (scroll-bar-mode -1)
+
+  (global-hl-line-mode +1)
+
+  (setq display-time-default-load-average nil)
+  (display-time-mode t)
+  ;; packages
+
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+
+  (use-package smartparens
+    :ensure t)
+  (require 'smartparens-config)
+  (fringe-mode 1)
+  (setq disabled-command-function nil)
+#+END_SRC
+
+* UI (themes and dashboard)
+
+#+BEGIN_SRC emacs-lisp
+    (use-package dashboard
+      :ensure t
+      :config
+      (dashboard-setup-startup-hook))
+    (setq dashboard-banner-logo-title "Welcome To the Best OS")
+    (setq dashboard-items '((recents . 5)
+                            (projects . 5)
+                            (bookmarks . 5)))
+    (setq dashboard-center-content t)
+    (setq dashboard-set-file-icons t)
+    (setq dashboard-startup-banner "~/.emacs.d/dash2.png")
+    (use-package which-key
+      :ensure t
+      :config (which-key-mode))
+    (define-key which-key-mode-map (kbd "C-x <f5>") 'which-key-C-h-dispatch)
+    (define-key which-key-mode-map (kbd "C-c <f5>") 'which-key-C-h-dispatch)
+    (define-key which-key-mode-map (kbd "<escape> <f5>") 'which-key-C-h-dispatch)
+
+    (use-package all-the-icons
+      :ensure t)
+(add-hook 'dired-mode-hook 'all-the-icons-dired-mode)
+    (use-package doom-modeline
+      :ensure t
+      :hook (after-init . doom-modeline-mode))
+
+    (use-package doom-themes
+      :ensure t
+      :config
+      (load-theme 'doom-gruvbox t))
+#+END_SRC
+
+* Org Settings and packages
+
+#+BEGIN_SRC emacs-lisp
+(setq org-hide-emphasis-markers t)
+(font-lock-add-keywords 'org-mode
+                        '(("^ *\\([-]\\) "
+                           (0 (prog1 () (compose-region (match-beginning 1)
+                           (match-end 1) "•"))))))
+(use-package org-bullets
+  :ensure t
+  :config
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+(setq org-support-shift-select t)
+(add-hook 'org-mode-hook #'smartparens-mode)
+(with-eval-after-load 'org       
+  (setq org-startup-indented t) ; Enable `org-indent-mode' by default
+  (add-hook 'org-mode-hook #'visual-line-mode))
+
+(custom-set-variables
+ '(org-directory "~/Documents/org")
+ '(org-agenda-files (list org-directory)))
+(use-package ox-hugo
+   :ensure t
+   :after ox)
+#+END_SRC
+
+* Spell Check and syntax
+
+#+BEGIN_SRC emacs-lisp
+;;spell check setup for Emacs  
+(dolist (hook '(text-mode-hook))
+  (add-hook hook (lambda () (flyspell-mode 1))))
+(dolist (mode '(emacs-lisp-mode-hook
+                inferior-lisp-mode-hook
+                clojure-mode-hook
+                python-mode-hook
+                js-mode-hook
+                R-mode-hook
+                lua-mode-hook))
+  (add-hook mode
+            '(lambda ()
+               (flyspell-prog-mode))))
+
+(global-set-key (kbd "<f8>") 'ispell-word)
+(defun flyspell-check-next-highlighted-word ()
+  "Custom function to spell check next highlighted word"
+  (interactive)
+  (flyspell-goto-next-error)
+  (ispell-word))
+(global-set-key (kbd "M-<f8>") 'flyspell-check-next-highlighted-word)
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+#+END_SRC
+
+* auto complete (company)
+
+#+BEGIN_SRC emacs-lisp
+(use-package company
+    :ensure t
+    :defer t
+    :diminish (company-mode . " ⓐ")
+    :init
+    (global-company-mode)
+    :config
+    (setq company-tooltip-align-annotations t
+          company-idle-delay 0.2
+          ;; min prefix of 2 chars
+          company-minimum-prefix-length 2
+          company-require-match nil))
+(add-hook 'after-init-hook 'global-company-mode)
+  (use-package company-quickhelp          ; Show help in tooltip
+    :ensure t
+    :defer t
+    :init (with-eval-after-load 'company
+            (company-quickhelp-mode)))
+#+END_SRC
+
+* ivy counsel swiper
+
+#+BEGIN_SRC emacs-lisp
+(use-package ivy
+  :ensure t)
+(use-package swiper
+  :ensure t)
+(use-package counsel
+  :ensure t)
+(use-package counsel-projectile
+  :ensure t)
+(counsel-projectile-mode +1)
+(ivy-mode 1)
+(setq ivy-use-virtual-buffers t)
+(setq ivy-count-format "(%d/%d) ")
+(setq enable-recursive-minibuffers t)
+(global-set-key (kbd "C-c C-r") 'ivy-resume)
+(global-set-key (kbd "C-s") 'swiper-isearch)
+(global-set-key (kbd "M-y") 'counsel-yank-pop)
+(global-set-key (kbd "<f6>") 'ivy-resume)
+(global-set-key (kbd "M-x") 'counsel-M-x)
+(global-set-key (kbd "C-x C-f") 'counsel-find-file)
+(global-set-key (kbd "<f1> f") 'counsel-describe-function)
+(global-set-key (kbd "<f1> v") 'counsel-describe-variable)
+(global-set-key (kbd "<f1> l") 'counsel-find-library)
+(global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
+(global-set-key (kbd "<f2> u") 'counsel-unicode-char)
+(global-set-key (kbd "C-c g") 'counsel-git)
+(global-set-key (kbd "C-c j") 'counsel-git-grep)
+(global-set-key (kbd "C-c k") 'counsel-ag)
+(global-set-key (kbd "C-x l") 'counsel-locate)
+(global-set-key (kbd "C-S-o") 'counsel-rhythmbox)
+(define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
+#+END_SRC
+
+* exwm
+
+** INSTALL
+
+#+BEGIN_SRC emacs-lisp
+(use-package exwm
+  :ensure t)
+(require 'exwm)
+(require 'exwm-config)
+(exwm-config-ido)
+(server-start)
+(exwm-enable)
+(require 'exwm-systemtray)
+(exwm-systemtray-enable)
+(setq exwm-layout-show-all-buffers t)
+#+END_SRC
+
+** Config
+#+BEGIN_SRC emacs-lisp
+;;exwm changes to start open and close emacs
+(setq exwm-workspace-number 4)
+(setq exwm-input-global-keys
+      `(
+        ;; Bind "s-z" to exit char-mode and fullscreen mode.
+        ([?\s-z] . exwm-reset)
+        ;; Bind "s-a" to enter char-mode so commands are not taken into emacs in exwm buffers
+        ([?\s-a] . exwm-input-release-keyboard)
+        ;; Bind "s-w" to switch workspace interactively.
+        ([?\s-w] . exwm-workspace-switch)
+        ;; toggle floating 
+        ([?\s-f] . exwm-floating-toggle-floating)
+        ;; move workspace to another window
+        ([?\s-c] . exwm-workspace-move-window)
+        ;; toggle fullscreen in exwm
+        ([?\s-t] . exwm-layout-set-fullscreen)
+        ;; menu for swapping between buffers in workspaces\
+        ([?\s-b] . exwm-workspace-switch-to-buffer)
+        ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
+        ,@(mapcar (lambda (i)
+                    `(,(kbd (format "s-%d" i)) .
+                      (lambda ()
+                        (interactive)
+                        (exwm-workspace-switch-create ,i))))
+                  (number-sequence 1 9))
+        ;; Bind "s-&" to launch applications ('M-&' also works if the output
+        ;; buffer does not bother you).
+        ([?\s-r] . (lambda (command)
+		     (interactive (list (read-shell-command "$ ")))
+		     (start-process-shell-command command nil command)))
+        ;; Bind "s-<f2>" to "terminator" a terminal emulator
+        ([?\s-x] . (lambda ()
+		    (interactive)
+		    (start-process "" nil "kitty")))))
+
+(add-hook 'exwm-update-class-hook
+          (lambda ()
+            (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                        (string= "gimp" exwm-instance-name))
+              (exwm-workspace-rename-buffer exwm-class-name))))
+(add-hook 'exwm-update-title-hook
+          (lambda ()
+            (when (or (not exwm-instance-name)
+                      (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                      (string= "gimp" exwm-instance-name))
+              (exwm-workspace-rename-buffer exwm-title))))
+#+END_SRC
+
+* coding languages(also add matching pairs)
+** python
+
+#+BEGIN_SRC emacs-lisp
+  (use-package elpy
+    :ensure t
+    :init
+    (add-to-list 'auto-mode-alist '("\\.py$" . python-mode))
+    :custom
+    (elpy-rpc-backend "jedi"))
+
+(use-package python
+  :ensure t
+  :mode ("\\.py" . python-mode)
+  :config
+  (setq python-indent-offset 4)
+  (elpy-enable))
+
+(add-hook 'python-mode-hook #'smartparens-mode)
+
+  (use-package company-jedi
+    :ensure t
+    :defer t
+    :init
+   (defun enable-jedi()
+      (setq-local company-backends
+                  (append '(company-jedi) company-backends)))
+    (with-eval-after-load 'company
+      (add-hook 'python-mode-hook 'enable-jedi)))
+#+END_SRC
+
+** lua  
+
+#+BEGIN_SRC emacs-lisp
+(use-package lua-mode
+  :ensure t)
+(add-hook 'lua-mode-hook #'smartparens-mode)
+#+END_SRC
+
+** elisp
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'emacs-lisp-mode-hook #'smartparens-mode)
+#+END_SRC
+
+** R
+
+#+BEGIN_SRC emacs-lisp
+(use-package ess
+  :ensure t)
+(require 'ess-r-mode)
+  (add-hook 'ess-mode-hook #'smartparens-mode)
+#+END_SRC
+
+* misc packages
+
+#+BEGIN_SRC emacs-lisp
+  (unless (package-installed-p 'projectile)
+    (package-install 'projectile))
+
+  (require 'projectile)
+  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+  (projectile-mode +1)
+
+  (use-package magit
+    :ensure t)
+  (global-set-key (kbd "C-x g") 'magit-status)
+  (global-set-key (kbd "C-x M-g") 'magit-dispatch)
+
+  (use-package tldr
+    :ensure t)
+
+  (use-package darkroom
+    :ensure t)
+  (global-set-key (kbd "C-c d") 'darkroom-mode)
+
+  (use-package expand-region
+    :ensure t)
+  (global-set-key (kbd "C-=") 'er/expand-region)
+  (global-set-key (kbd "C--") 'er/contract-region)
+
+  (use-package steam
+    :ensure t)
+  (setq steam-username "4games") ;; Replace Username with your steam username
+#+END_SRC
+
+* ERC
+
+#+BEGIN_SRC emacs-lisp
+(require 'erc)
+(erc-spelling-mode 1)
+(setq erc-echo-notices-in-minibuffer-flag t)
+(require 'erc-match)
+    (setq erc-keywords '("shuwan4games"))
+(defun start-erc ()
+  "Log into freenode with less keystrokes"
+  (interactive)
+  (let
+      ((password-cache nil))
+    (erc
+     :server "irc.freenode.net"
+     :port "6667"
+     :nick "shuwan4games"                ;set your username here
+     :password (password-read (format "Your password for freenode? ")))))
+(global-set-key (kbd "C-c e") 'start-erc)
+#+END_SRC
+
+* packages not in MELPA (AKA source installed packages)
