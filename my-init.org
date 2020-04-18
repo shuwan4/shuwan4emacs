@@ -48,7 +48,7 @@
       (dashboard-setup-startup-hook))
     (setq dashboard-banner-logo-title "Welcome To the Best OS")
     (setq dashboard-items '((recents . 5)
-                            (projects . 5)
+                            (projects . 10)
                             (bookmarks . 5)))
     (setq dashboard-center-content t)
     (setq dashboard-set-file-icons t)
@@ -62,7 +62,6 @@
 
     (use-package all-the-icons
       :ensure t)
-(add-hook 'dired-mode-hook 'all-the-icons-dired-mode)
     (use-package doom-modeline
       :ensure t
       :hook (after-init . doom-modeline-mode))
@@ -164,24 +163,39 @@
   :ensure t)
 (counsel-projectile-mode +1)
 (ivy-mode 1)
+(setq ivy-initial-inputs-alist nil)
 (setq ivy-use-virtual-buffers t)
 (setq ivy-count-format "(%d/%d) ")
 (setq enable-recursive-minibuffers t)
 (global-set-key (kbd "C-c C-r") 'ivy-resume)
 (global-set-key (kbd "C-s") 'swiper-isearch)
-(global-set-key (kbd "M-y") 'counsel-yank-pop)
 (global-set-key (kbd "<f6>") 'ivy-resume)
 (global-set-key (kbd "M-x") 'counsel-M-x)
 (global-set-key (kbd "C-x C-f") 'counsel-find-file)
 (global-set-key (kbd "<f1> f") 'counsel-describe-function)
 (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
-(global-set-key (kbd "<f1> l") 'counsel-find-library)
 (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
 (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
-(global-set-key (kbd "C-c k") 'counsel-ag)
-(global-set-key (kbd "C-x l") 'counsel-locate)
-(global-set-key (kbd "C-S-o") 'counsel-rhythmbox)
-(define-key minibuffer-local-map (kbd "C-r") 'counsel-minibuffer-history)
+#+END_SRC
+
+* god mode
+
+#+BEGIN_SRC emacs-lisp
+(use-package god-mode
+  :ensure t)
+(define-key god-local-mode-map (kbd "z") #'repeat)
+(define-key god-local-mode-map (kbd "i") #'god-local-mode)
+(define-key god-local-mode-map (kbd ".") #'repeat)
+(global-set-key (kbd "C-x C-1") #'delete-other-windows)
+(global-set-key (kbd "C-x C-2") #'split-window-below)
+(global-set-key (kbd "C-x C-3") #'split-window-right)
+(global-set-key (kbd "C-x C-0") #'delete-window)
+(add-to-list 'god-exempt-major-modes 'dired-mode)
+(setq god-exempt-major-modes nil)
+(setq god-exempt-predicates nil)
+(setq which-key-enable-god-mode-support t)
+(global-set-key (kbd "M-SPC") #'god-mode-all)
+
 #+END_SRC
 
 * exwm
@@ -198,7 +212,6 @@
 (exwm-enable)
 (require 'exwm-systemtray)
 (exwm-systemtray-enable)
-(setq exwm-layout-show-all-buffers t)
 #+END_SRC
 
 ** Config
@@ -251,6 +264,31 @@
               (exwm-workspace-rename-buffer exwm-title))))
 #+END_SRC
 
+** additional packages for wm
+
+#+BEGIN_SRC emacs-lisp
+(use-package desktop-environment
+  :ensure t)
+(setq desktop-environment-screenshot-directory "~/Pictures")
+(desktop-environment-mode)
+(use-package gpastel
+  :ensure t)
+(exwm-input-set-key (kbd "M-y") #'my/exwm-counsel-yank-pop)
+
+(defun my/exwm-counsel-yank-pop ()
+  "Same as `counsel-yank-pop' and paste into exwm buffer."
+  (interactive)
+  (let ((inhibit-read-only t)
+        ;; Make sure we send selected yank-pop candidate to
+        ;; clipboard:
+        (yank-pop-change-selection t))
+    (call-interactively #'counsel-yank-pop))
+  (when (derived-mode-p 'exwm-mode)
+    ;; https://github.com/ch11ng/exwm/issues/413#issuecomment-386858496
+    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
+    (exwm-input--fake-key ?\C-v)))
+#+END_SRC
+
 * coding languages(also add matching pairs)
 ** python
 
@@ -268,6 +306,10 @@
   :config
   (setq python-indent-offset 4)
   (elpy-enable))
+
+(when (load "flycheck" t t)
+  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
+  (add-hook 'elpy-mode-hook 'flycheck-mode))
 
 (add-hook 'python-mode-hook #'smartparens-mode)
 
@@ -308,33 +350,40 @@
 * misc packages
 
 #+BEGIN_SRC emacs-lisp
-  (unless (package-installed-p 'projectile)
-    (package-install 'projectile))
+   (unless (package-installed-p 'projectile)
+     (package-install 'projectile))
 
-  (require 'projectile)
-  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-  (projectile-mode +1)
+   (require 'projectile)
+   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+   (projectile-mode +1)
 
-  (use-package magit
-    :ensure t)
-  (global-set-key (kbd "C-x g") 'magit-status)
-  (global-set-key (kbd "C-c g") 'magit-dispatch)
+   (use-package magit
+     :ensure t)
+   (global-set-key (kbd "C-x g") 'magit-status)
+   (global-set-key (kbd "C-c g") 'magit-dispatch)
 
-  (use-package tldr
-    :ensure t)
+   (use-package tldr
+     :ensure t)
 
-  (use-package darkroom
-    :ensure t)
-  (global-set-key (kbd "C-c d") 'darkroom-mode)
+   (use-package darkroom
+     :ensure t)
+   (global-set-key (kbd "C-c d") 'darkroom-mode)
 
-  (use-package expand-region
-    :ensure t)
-  (global-set-key (kbd "C-=") 'er/expand-region)
-  (global-set-key (kbd "C--") 'er/contract-region)
+   (use-package expand-region
+     :ensure t)
+   (global-set-key (kbd "C-=") 'er/expand-region)
+   (global-set-key (kbd "C--") 'er/contract-region)
 
-  (use-package steam
-    :ensure t)
-  (setq steam-username "4games") ;; Replace Username with your steam username
+   (use-package steam
+     :ensure t)
+   (setq steam-username "4games") ;; Replace Username with your steam username (this package just allows launching of steam games from emacs and for you to make your own org file for steam games)
+
+   (use-package pdf-tools
+     :ensure t)
+
+   (use-package iedit
+     :ensure t)
+  (global-set-key (kbd "C-c i") 'iedit-mode)
 #+END_SRC
 
 * ERC
@@ -344,7 +393,7 @@
 (erc-spelling-mode 1)
 (setq erc-echo-notices-in-minibuffer-flag t)
 (require 'erc-match)
-    (setq erc-keywords '("shuwan4games"))
+    (setq erc-keywords '("shuwan4games")) ;set your irc name so you can see highlights of your mentions
 (defun start-erc ()
   "Log into freenode with less keystrokes"
   (interactive)
@@ -356,6 +405,44 @@
      :nick "shuwan4games"                ;set your username here
      :password (password-read (format "Your password for freenode? ")))))
 (global-set-key (kbd "C-c e") 'start-erc)
+#+END_SRC
+
+* Dired
+
+#+BEGIN_SRC emacs-lisp
+    (use-package dired-single
+      :ensure t)
+  (defun my-dired-init ()
+    "Bunch of stuff to run for dired, either immediately or when it's
+     loaded."
+    ;; <add other stuff here>
+    (define-key dired-mode-map [remap dired-find-file]
+      'dired-single-buffer)
+    (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
+      'dired-single-buffer-mouse)
+    (define-key dired-mode-map [remap dired-up-directory]
+      'dired-single-up-directory))
+
+  ;; if dired's already loaded, then the keymap will be bound
+  (if (boundp 'dired-mode-map)
+      ;; we're good to go; just add our bindings
+      (my-dired-init)
+    ;; it's not loaded yet, so add our bindings to the load-hook
+    (add-hook 'dired-load-hook 'my-dired-init))
+  (global-set-key [(f5)] 'dired-single-magic-buffer)
+  (global-set-key [(control f5)] (function
+          (lambda nil (interactive)
+          (dired-single-magic-buffer default-directory))))
+  (global-set-key [(shift f5)] (function
+          (lambda nil (interactive)
+          (message "Current directory is: %s" default-directory))))
+  (global-set-key [(meta f5)] 'dired-single-toggle-buffer-name)
+#+END_SRC
+
+* eshell and term
+
+#+BEGIN_SRC emacs-lisp
+    (add-to-list 'eshell-visual-commands "htop")
 #+END_SRC
 
 * packages not in MELPA (AKA source installed packages)
