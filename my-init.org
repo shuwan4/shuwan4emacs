@@ -5,7 +5,7 @@
   ;; add after this line
   ;; global bindings outside of config variables
   (global-set-key (kbd "C-c r") 'rename-buffer)
-
+  (global-set-key (kbd "C-x M-s") 'eshell)
   ;;settings
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
 
@@ -29,7 +29,6 @@
   ;; packages
 
   (unless (package-installed-p 'use-package)
-    (package-refresh-contents)
     (package-install 'use-package))
 
   (use-package smartparens
@@ -37,6 +36,10 @@
   (require 'smartparens-config)
   (fringe-mode 1)
   (setq disabled-command-function nil)
+(use-package sudo-edit
+  :ensure t)
+(global-set-key (kbd "C-c M-r") 'sudo-edit)
+  (setq auth-sources '("~/.netrc")) ;;this was done for the sake of my auth info is for emails and tramp will auto read if auth-sources is not set
 #+END_SRC
 
 * UI (themes and dashboard)
@@ -46,9 +49,9 @@
       :ensure t
       :config
       (dashboard-setup-startup-hook))
+(setq initial-buffer-choice (lambda () (get-buffer "*dashboard*")))
     (setq dashboard-banner-logo-title "Welcome To the Best OS")
-    (setq dashboard-items '((recents . 5)
-                            (projects . 10)
+    (setq dashboard-items '((recents . 10)
                             (bookmarks . 5)))
     (setq dashboard-center-content t)
     (setq dashboard-set-file-icons t)
@@ -140,7 +143,7 @@
     (setq company-tooltip-align-annotations t
           company-idle-delay 0.2
           ;; min prefix of 2 chars
-          company-minimum-prefix-length 2
+          company-minimum-prefix-length 1
           company-require-match nil))
 (add-hook 'after-init-hook 'global-company-mode)
   (use-package company-quickhelp          ; Show help in tooltip
@@ -148,6 +151,7 @@
     :defer t
     :init (with-eval-after-load 'company
             (company-quickhelp-mode)))
+(define-key company-active-map (kbd "M-.") 'company-show-location)
 #+END_SRC
 
 * ivy counsel swiper
@@ -159,9 +163,6 @@
   :ensure t)
 (use-package counsel
   :ensure t)
-(use-package counsel-projectile
-  :ensure t)
-(counsel-projectile-mode +1)
 (ivy-mode 1)
 (setq ivy-initial-inputs-alist nil)
 (setq ivy-use-virtual-buffers t)
@@ -186,11 +187,11 @@
 (define-key god-local-mode-map (kbd "z") #'repeat)
 (define-key god-local-mode-map (kbd "i") #'god-local-mode)
 (define-key god-local-mode-map (kbd ".") #'repeat)
-(global-set-key (kbd "C-x C-1") #'delete-other-windows)
-(global-set-key (kbd "C-x C-2") #'split-window-below)
-(global-set-key (kbd "C-x C-3") #'split-window-right)
-(global-set-key (kbd "C-x C-0") #'delete-window)
-(add-to-list 'god-exempt-major-modes 'dired-mode)
+(global-set-key (kbd "C-x C-1") 'delete-other-windows)
+(global-set-key (kbd "C-x C-2") 'split-window-below)
+(global-set-key (kbd "C-x C-3") 'split-window-right)
+(global-set-key (kbd "C-x C-0") 'delete-window)
+(add-to-list 'god-exempt-major-modes 'dired-mode 'mu4e)
 (setq god-exempt-major-modes nil)
 (setq god-exempt-predicates nil)
 (setq which-key-enable-god-mode-support t)
@@ -210,8 +211,6 @@
 (exwm-config-ido)
 (server-start)
 (exwm-enable)
-(require 'exwm-systemtray)
-(exwm-systemtray-enable)
 #+END_SRC
 
 ** Config
@@ -267,10 +266,6 @@
 ** additional packages for wm
 
 #+BEGIN_SRC emacs-lisp
-(use-package desktop-environment
-  :ensure t)
-(setq desktop-environment-screenshot-directory "~/Pictures")
-(desktop-environment-mode)
 (use-package gpastel
   :ensure t)
 (exwm-input-set-key (kbd "M-y") #'my/exwm-counsel-yank-pop)
@@ -290,48 +285,6 @@
 #+END_SRC
 
 * coding languages(also add matching pairs)
-** python
-
-#+BEGIN_SRC emacs-lisp
-  (use-package elpy
-    :ensure t
-    :init
-    (add-to-list 'auto-mode-alist '("\\.py$" . python-mode))
-    :custom
-    (elpy-rpc-backend "jedi"))
-
-(use-package python
-  :ensure t
-  :mode ("\\.py" . python-mode)
-  :config
-  (setq python-indent-offset 4)
-  (elpy-enable))
-
-(when (load "flycheck" t t)
-  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
-  (add-hook 'elpy-mode-hook 'flycheck-mode))
-
-(add-hook 'python-mode-hook #'smartparens-mode)
-
-  (use-package company-jedi
-    :ensure t
-    :defer t
-    :init
-   (defun enable-jedi()
-      (setq-local company-backends
-                  (append '(company-jedi) company-backends)))
-    (with-eval-after-load 'company
-      (add-hook 'python-mode-hook 'enable-jedi)))
-#+END_SRC
-
-** lua  
-
-#+BEGIN_SRC emacs-lisp
-(use-package lua-mode
-  :ensure t)
-(add-hook 'lua-mode-hook #'smartparens-mode)
-#+END_SRC
-
 ** elisp
 
 #+BEGIN_SRC emacs-lisp
@@ -344,19 +297,39 @@
 (use-package ess
   :ensure t)
 (require 'ess-r-mode)
+(use-package ess-R-data-view
+  :ensure t)
   (add-hook 'ess-mode-hook #'smartparens-mode)
+#+END_SRC
+
+** racket
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'racket-mode-hook #'smartparens-mode)
+(use-package racket-mode
+  :ensure t)
+(add-hook 'racket-mode-hook
+	  (lambda ()
+	    (define-key racket-mode-map (kbd "<f4>") 'racket-run)))
+ (add-hook 'racket-repl-mode-hook #'smartparens-mode)
+#+END_SRC
+
+** python
+
+#+BEGIN_SRC emacs-lisp
+(use-package anaconda-mode
+  :ensure t)
+(add-hook 'python-mode-hook 'anaconda-mode)
+(use-package company-anaconda
+  :ensure t)
+(eval-after-load "company"
+ '(add-to-list 'company-backends 'company-anaconda))
+(add-hook 'python-mode-hook #'smartparens-mode)
 #+END_SRC
 
 * misc packages
 
 #+BEGIN_SRC emacs-lisp
-   (unless (package-installed-p 'projectile)
-     (package-install 'projectile))
-
-   (require 'projectile)
-   (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-   (projectile-mode +1)
-
    (use-package magit
      :ensure t)
    (global-set-key (kbd "C-x g") 'magit-status)
@@ -376,14 +349,24 @@
 
    (use-package steam
      :ensure t)
-   (setq steam-username "4games") ;; Replace Username with your steam username (this package just allows launching of steam games from emacs and for you to make your own org file for steam games)
-
-   (use-package pdf-tools
-     :ensure t)
+   (setq steam-username "4games") ;; (super unneded just for fun cause why not)Replace Username with your steam username (this package just allows launching of steam games from emacs and for you to make your own org file for steam games)
 
    (use-package iedit
      :ensure t)
   (global-set-key (kbd "C-c i") 'iedit-mode)
+(use-package md4rd
+  :ensure t)
+(add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
+(use-package pdf-tools
+  :ensure t)
+(use-package org2blog
+  :ensure t)
+(add-hook 'org-mode-hook #'org2blog-maybe-start)
+(setq org2blog/wp-blog-alist
+      '(("emacs rocks"
+         :url "https://www.emacs.rocks/xmlrpc.php"
+         :username "shuwan")))
+ (global-set-key (kbd "<f7>") 'org2blog-user-interface)
 #+END_SRC
 
 * ERC
@@ -439,10 +422,53 @@
   (global-set-key [(meta f5)] 'dired-single-toggle-buffer-name)
 #+END_SRC
 
-* eshell and term
+* email
 
 #+BEGIN_SRC emacs-lisp
-    (add-to-list 'eshell-visual-commands "htop")
+(require 'mu4e)
+
+(setq mu4e-maildir "~/.mail"
+mu4e-attachment-dir "~/Downloads")
+
+(setq user-mail-address "shuwan@protonmail.com"
+user-full-name  "shuwan")
+
+ ;;Get mail
+(setq mu4e-get-mail-command "mbsync protonmail"
+mu4e-change-filenames-when-moving t   ; needed for mbsync
+mu4e-update-interval 600)             ; update every 10 minutes
+
+ ;;Send mail
+(setq message-send-mail-function 'smtpmail-send-it
+smtpmail-auth-credentials "~/.authinfo.gpg"
+smtpmail-smtp-server "127.0.0.1"
+smtpmail-stream-type 'starttls
+smtpmail-smtp-service 1025)
+
+(add-to-list 'gnutls-trustfiles (expand-file-name "~/.config/protonmail/bridge/cert.pem"))
+(global-set-key (kbd "C-c M-m") 'mu4e)
+(setq browse-url-browser-function 'browse-url-generic)
+(setq browse-url-generic-program "firefox")
+#+END_SRC
+
+* nix
+
+#+BEGIN_SRC emacs-lisp
+(use-package build-farm
+  :ensure t)
+(use-package nix-mode
+  :ensure t)
+(use-package pretty-sha-path
+  :ensure t)
+(use-package nixpkgs-fmt
+  :ensure t)
+(use-package nixos-options
+  :ensure t)
+(use-package company-nixos-options
+  :ensure t)
+(add-hook 'shell-mode-hook 'pretty-sha-path-mode)
+(add-hook 'dired-mode-hook 'pretty-sha-path-mode)
+(add-hook 'nix-mode-hook #'smartparens-mode)
 #+END_SRC
 
 * packages not in MELPA (AKA source installed packages)
