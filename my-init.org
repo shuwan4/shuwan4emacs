@@ -52,7 +52,8 @@
 (setq initial-buffer-choice (lambda () (get-buffer "*dashboard*")))
     (setq dashboard-banner-logo-title "Welcome To the Best OS")
     (setq dashboard-items '((recents . 10)
-                            (bookmarks . 5)))
+                            (bookmarks . 5)
+                            (projects . 5)))
     (setq dashboard-center-content t)
     (setq dashboard-set-file-icons t)
     (setq dashboard-startup-banner "~/.emacs.d/dash2.png")
@@ -128,6 +129,10 @@
 (use-package flycheck
   :ensure t
   :init (global-flycheck-mode))
+(use-package exec-path-from-shell
+  :ensure t)
+(when (memq window-system '(mac ns x))
+  (exec-path-from-shell-initialize))
 #+END_SRC
 
 * auto complete (company)
@@ -154,7 +159,7 @@
 (define-key company-active-map (kbd "M-.") 'company-show-location)
 #+END_SRC
 
-* ivy counsel swiper
+* ivy counsel swiper projectile
 
 #+BEGIN_SRC emacs-lisp
 (use-package ivy
@@ -162,6 +167,10 @@
 (use-package swiper
   :ensure t)
 (use-package counsel
+  :ensure t)
+(use-package counsel-projectile
+  :ensure t)
+(use-package projectile
   :ensure t)
 (ivy-mode 1)
 (setq ivy-initial-inputs-alist nil)
@@ -177,6 +186,8 @@
 (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
 (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
 (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
+(projectile-mode +1)
+(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
 #+END_SRC
 
 * god mode
@@ -199,91 +210,6 @@
 
 #+END_SRC
 
-* exwm
-
-** INSTALL
-
-#+BEGIN_SRC emacs-lisp
-(use-package exwm
-  :ensure t)
-(require 'exwm)
-(require 'exwm-config)
-(exwm-config-ido)
-(server-start)
-(exwm-enable)
-#+END_SRC
-
-** Config
-#+BEGIN_SRC emacs-lisp
-;;exwm changes to start open and close emacs
-(setq exwm-workspace-number 4)
-(setq exwm-input-global-keys
-      `(
-        ;; Bind "s-z" to exit char-mode and fullscreen mode.
-        ([?\s-z] . exwm-reset)
-        ;; Bind "s-a" to enter char-mode so commands are not taken into emacs in exwm buffers
-        ([?\s-a] . exwm-input-release-keyboard)
-        ;; Bind "s-w" to switch workspace interactively.
-        ([?\s-w] . exwm-workspace-switch)
-        ;; toggle floating 
-        ([?\s-f] . exwm-floating-toggle-floating)
-        ;; move workspace to another window
-        ([?\s-c] . exwm-workspace-move-window)
-        ;; toggle fullscreen in exwm
-        ([?\s-t] . exwm-layout-set-fullscreen)
-        ;; menu for swapping between buffers in workspaces\
-        ([?\s-b] . exwm-workspace-switch-to-buffer)
-        ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
-        ,@(mapcar (lambda (i)
-                    `(,(kbd (format "s-%d" i)) .
-                      (lambda ()
-                        (interactive)
-                        (exwm-workspace-switch-create ,i))))
-                  (number-sequence 0 9))
-        ;; Bind "s-&" to launch applications ('M-&' also works if the output
-        ;; buffer does not bother you).
-        ([?\s-r] . (lambda (command)
-		     (interactive (list (read-shell-command "$ ")))
-		     (start-process-shell-command command nil command)))
-        ;; Bind "s-<f2>" to "terminator" a terminal emulator
-        ([?\s-x] . (lambda ()
-		    (interactive)
-		    (start-process "" nil "kitty")))))
-
-(add-hook 'exwm-update-class-hook
-          (lambda ()
-            (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                        (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-class-name))))
-(add-hook 'exwm-update-title-hook
-          (lambda ()
-            (when (or (not exwm-instance-name)
-                      (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                      (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-title))))
-#+END_SRC
-
-** additional packages for wm
-
-#+BEGIN_SRC emacs-lisp
-(use-package gpastel
-  :ensure t)
-(exwm-input-set-key (kbd "M-y") #'my/exwm-counsel-yank-pop)
-
-(defun my/exwm-counsel-yank-pop ()
-  "Same as `counsel-yank-pop' and paste into exwm buffer."
-  (interactive)
-  (let ((inhibit-read-only t)
-        ;; Make sure we send selected yank-pop candidate to
-        ;; clipboard:
-        (yank-pop-change-selection t))
-    (call-interactively #'counsel-yank-pop))
-  (when (derived-mode-p 'exwm-mode)
-    ;; https://github.com/ch11ng/exwm/issues/413#issuecomment-386858496
-    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
-    (exwm-input--fake-key ?\C-v)))
-#+END_SRC
-
 * coding languages(also add matching pairs)
 ** elisp
 
@@ -302,31 +228,55 @@
   (add-hook 'ess-mode-hook #'smartparens-mode)
 #+END_SRC
 
-** racket
+** common lisp
 
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'racket-mode-hook #'smartparens-mode)
-(use-package racket-mode
+(use-package slime
   :ensure t)
-(add-hook 'racket-mode-hook
-	  (lambda ()
-	    (define-key racket-mode-map (kbd "<f4>") 'racket-run)))
- (add-hook 'racket-repl-mode-hook #'smartparens-mode)
+(setq inferior-lisp-program "sbcl")
+(use-package slime-company
+  :ensure t)
+  (add-hook 'lisp-mode-hook #'smartparens-mode)
+(slime-setup '(slime-fancy slime-company))
 #+END_SRC
 
-** python
+** rust
+
+#+BEGIN_SRC emacs-lisp
+(use-package rust-mode
+  :ensure t)
+(require 'rust-mode)
+(add-hook 'rust-mode-hook
+          (lambda () (setq indent-tabs-mode nil)))
+(use-package flycheck-rust
+  :ensure t)
+(with-eval-after-load 'rust-mode
+  (add-hook 'flycheck-mode-hook #'flycheck-rust-setup))
+(use-package racer
+  :ensure t)
+(add-hook 'rust-mode-hook #'racer-mode)
+(add-hook 'racer-mode-hook #'company-mode)
+(require 'rust-mode)
+(define-key rust-mode-map (kbd "TAB") #'company-indent-or-complete-common)
+(setq company-tooltip-align-annotations t)
+(setq rust-format-on-save t)
+(add-hook 'rust-mode-hook #'smartparens-mode)
+(setq racer-rust-src-path (concat(getenv "HOME")"/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src/"))
+;; you can get this by testing racer in cli and grabbing the path it shows
+#+END_SRC
+
+** common lisp
 
 #+BEGIN_SRC emacs-lisp
 (use-package anaconda-mode
-  :ensure t)
+ :ensure t)
 (add-hook 'python-mode-hook 'anaconda-mode)
+(add-hook 'python-mode-hook 'anaconda-eldoc-mode)
 (use-package company-anaconda
-  :ensure t)
+ :ensure t)
 (eval-after-load "company"
  '(add-to-list 'company-backends 'company-anaconda))
-(add-hook 'python-mode-hook #'smartparens-mode)
 #+END_SRC
-
 * misc packages
 
 #+BEGIN_SRC emacs-lisp
@@ -349,24 +299,23 @@
 
    (use-package steam
      :ensure t)
-   (setq steam-username "4games") ;; (super unneded just for fun cause why not)Replace Username with your steam username (this package just allows launching of steam games from emacs and for you to make your own org file for steam games)
+   (setq steam-username "4games") ;; (super unneded just for fun cause why not)
 
    (use-package iedit
      :ensure t)
   (global-set-key (kbd "C-c i") 'iedit-mode)
-(use-package md4rd
-  :ensure t)
-(add-hook 'md4rd-mode-hook 'md4rd-indent-all-the-lines)
 (use-package pdf-tools
   :ensure t)
-(use-package org2blog
+(add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
+(use-package spotify
   :ensure t)
-(add-hook 'org-mode-hook #'org2blog-maybe-start)
-(setq org2blog/wp-blog-alist
-      '(("emacs rocks"
-         :url "https://www.emacs.rocks/xmlrpc.php"
-         :username "shuwan")))
- (global-set-key (kbd "<f7>") 'org2blog-user-interface)
+(global-set-key (kbd "s-<pause>") 'spotify-playpause)
+(global-set-key (kbd "s-M-<pause>") 'spotify-next)
+(global-set-key (kbd "s-C-<pause>") 'spotify-previous)
+
+(use-package emojify
+  :ensure t)
+(add-hook 'after-init-hook #'global-emojify-mode)
 #+END_SRC
 
 * ERC
@@ -422,16 +371,13 @@
   (global-set-key [(meta f5)] 'dired-single-toggle-buffer-name)
 #+END_SRC
 
-* email
+* email 
 
 #+BEGIN_SRC emacs-lisp
 (require 'mu4e)
 
 (setq mu4e-maildir "~/.mail"
 mu4e-attachment-dir "~/Downloads")
-
-(setq user-mail-address "shuwan@protonmail.com"
-user-full-name  "shuwan")
 
  ;;Get mail
 (setq mu4e-get-mail-command "mbsync protonmail"
@@ -445,30 +391,39 @@ smtpmail-smtp-server "127.0.0.1"
 smtpmail-stream-type 'starttls
 smtpmail-smtp-service 1025)
 
-(add-to-list 'gnutls-trustfiles (expand-file-name "~/.config/protonmail/bridge/cert.pem"))
 (global-set-key (kbd "C-c M-m") 'mu4e)
 (setq browse-url-browser-function 'browse-url-generic)
 (setq browse-url-generic-program "firefox")
 #+END_SRC
 
-* nix
+* website
 
 #+BEGIN_SRC emacs-lisp
-(use-package build-farm
+(use-package org2blog
   :ensure t)
-(use-package nix-mode
-  :ensure t)
-(use-package pretty-sha-path
-  :ensure t)
-(use-package nixpkgs-fmt
-  :ensure t)
-(use-package nixos-options
-  :ensure t)
-(use-package company-nixos-options
-  :ensure t)
-(add-hook 'shell-mode-hook 'pretty-sha-path-mode)
-(add-hook 'dired-mode-hook 'pretty-sha-path-mode)
-(add-hook 'nix-mode-hook #'smartparens-mode)
+(add-hook 'org-mode-hook #'org2blog-maybe-start)
+(setq org2blog/wp-blog-alist
+      '(("emacs rocks"
+         :url "https://www.emacs.rocks/xmlrpc.php"
+         :username "shuwan")))
+ (global-set-key (kbd "<f7>") 'org2blog-user-interface)
 #+END_SRC
 
-* packages not in MELPA (AKA source installed packages)
+* packages not in MELPA (quelpa)
+
+#+BEGIN_SRC emacs-lisp
+(use-package quelpa
+  :ensure t)
+(use-package quelpa-use-package
+  :ensure t)
+(quelpa
+ '(quelpa-use-package
+   :fetcher git
+   :url "https://github.com/quelpa/quelpa-use-package.git"))
+(require 'quelpa-use-package)
+(use-package matrix-client
+  :quelpa (matrix-client :fetcher github :repo "alphapapa/matrix-client.el"
+                         :files (:defaults "logo.png" "matrix-client-standalone.el.sh")))
+(global-set-key (kbd "C-x M-m") 'matrix-client-frame)
+#+END_SRC
+

@@ -13,7 +13,7 @@
  '(org-directory "~/Documents/org")
  '(package-selected-packages
    (quote
-    (org2blog pdf-tools company-nixos-options nixos-options nixpkgs-fmt pretty-sha-path nix-mode build-farm dired-single md4rd iedit steam expand-region darkroom tldr magit company-anaconda anaconda-mode racket-mode ess-R-data-view ess gpastel exwm xelb which-key use-package sudo-edit smartparens ox-hugo org-bullets god-mode flycheck doom-themes doom-modeline dashboard counsel company-quickhelp))))
+    (matrix-client frame-purpose rainbow-identifiers esxml tracking ov a dash-functional anaphora quelpa-use-package quelpa org2blog which-key use-package tldr sudo-edit steam spotify smartparens slime-company pdf-tools ox-hugo org-bullets magit iedit god-mode expand-region exec-path-from-shell ess-R-data-view emojify doom-themes doom-modeline dired-single dashboard darkroom counsel-projectile company-quickhelp))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
